@@ -1,0 +1,7 @@
+# Normalize line endings so the repo stays LF-only regardless of the OS it was
+# authored on. Keeps CI (Linux) and local dev (Windows) from fighting over diffs.
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.ico binary
