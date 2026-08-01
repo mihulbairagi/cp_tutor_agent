@@ -133,9 +133,7 @@ class TutorRouter:
         mentioned = extract_topics(question)
         topic_filter = mentioned[0] if mentioned else None
 
-        weak = self._weak_topics.run(
-            limit=state.get("limit") or 5, topic_filter=topic_filter
-        )
+        weak = self._weak_topics.run(limit=state.get("limit") or 5, topic_filter=topic_filter)
         return {"weak_topics": weak, "topics": mentioned, "trace": ["weak_topics"]}
 
     def _recommend_node(self, state: TutorState) -> dict:
@@ -185,9 +183,7 @@ class TutorRouter:
     # -- entry point -------------------------------------------------------
     def ask(self, question: str, *, limit: int = 5) -> dict:
         """Run the graph over one question and return the final state."""
-        final: TutorState = self._graph.invoke(
-            {"question": question, "limit": limit, "trace": []}
-        )
+        final: TutorState = self._graph.invoke({"question": question, "limit": limit, "trace": []})
         return {
             "question": question,
             "intent": final.get("intent", "general"),

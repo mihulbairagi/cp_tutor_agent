@@ -190,9 +190,7 @@ class ResilientClient:
         self._limiter.acquire()
         started = time.monotonic()
 
-        response = self._client.request(
-            method, url, params=params, json=json_body, headers=headers
-        )
+        response = self._client.request(method, url, params=params, json=json_body, headers=headers)
         elapsed_ms = round((time.monotonic() - started) * 1000)
 
         if response.status_code in RETRYABLE_STATUS_CODES:

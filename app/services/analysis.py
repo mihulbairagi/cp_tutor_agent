@@ -199,9 +199,16 @@ def _build_reasons(
 ) -> list[str]:
     """Turn the numeric signals into sentences a human can act on.
 
-    Ordered by signal strength so the most important explanation is read first.
+    Ordered by **weighted contribution**, not raw signal value: a saturated
+    signal carrying a 0.20 weight moved the score less than a 0.8 on a 0.35
+    weight, so quoting the former first would misdirect the reader. The first
+    reason is always the one that actually drove the ranking.
     """
+    weights = settings.weakness_weights
     reasons: list[tuple[float, str]] = []
+
+    def contribution(signal: str) -> float:
+        return weights[signal] * signals[signal]
 
     if stat.total_touched == 0:
         return ["No attempts recorded on this topic — a genuine blind spot."]
@@ -210,7 +217,7 @@ def _build_reasons(
         rate = round(signals["struggle"] * 100)
         reasons.append(
             (
-                signals["struggle"],
+                contribution("struggle"),
                 f"{stat.attempted_unsolved} attempted but unsolved vs {stat.solved} solved "
                 f"({rate}% struggle rate, {stat.total_failed_submissions} failed submissions).",
             )
@@ -219,23 +226,26 @@ def _build_reasons(
     if stat.solved < settings.target_solves_per_topic:
         reasons.append(
             (
-                signals["coverage"],
+                contribution("coverage"),
                 f"Only {stat.solved} solved, below the {settings.target_solves_per_topic}-problem "
                 "target for a topic to count as practised.",
             )
         )
 
     if days_since is None:
-        reasons.append((signals["staleness"], "Never solved a problem on this topic."))
+        reasons.append((contribution("staleness"), "Never solved a problem on this topic."))
     elif days_since > settings.staleness_horizon_days // 2:
         reasons.append(
-            (signals["staleness"], f"Last solved {days_since} days ago — practice has gone stale.")
+            (
+                contribution("staleness"),
+                f"Last solved {days_since} days ago — practice has gone stale.",
+            )
         )
 
     if ceiling and stat.max_rating and stat.max_rating < ceiling:
         reasons.append(
             (
-                signals["difficulty"],
+                contribution("difficulty"),
                 f"Hardest solve here is rated {stat.max_rating}, "
                 f"{ceiling - stat.max_rating} points below your overall best of {ceiling}.",
             )
@@ -272,7 +282,9 @@ def score_topics(
                 continue
             working[topic] = TopicStat(topic=topic)
 
-    scored = [_score_one(stat, settings=settings, now=now, ceiling=ceiling) for stat in working.values()]
+    scored = [
+        _score_one(stat, settings=settings, now=now, ceiling=ceiling) for stat in working.values()
+    ]
     # Ties broken by fewest solves, so the emptier topic surfaces first.
     scored.sort(key=lambda topic: (-topic.score, topic.solved, topic.topic))
     return scored

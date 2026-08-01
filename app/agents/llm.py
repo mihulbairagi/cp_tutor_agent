@@ -66,8 +66,11 @@ _KEYWORD_RULES: list[tuple[str, re.Pattern[str]]] = [
     (
         "recommend",
         re.compile(
+            # `problems?` rather than `problem`: the group is closed by a `\b`,
+            # and "problem" followed by "s" is not a word boundary, so a bare
+            # `problem` here would silently fail to match "give me 3 problems".
             r"\b(recommend|suggest|what should i (do|solve|practi[cs]e)|practi[cs]e today|"
-            r"next problem|give me .*problem|problems? to solve|work on next|todo|"
+            r"next problem|give me .*problems?|problems? to solve|work on next|todo|"
             r"what to solve)\b",
             re.IGNORECASE,
         ),

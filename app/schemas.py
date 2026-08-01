@@ -321,7 +321,5 @@ class ErrorResponse(BaseModel):
     detail: str
 
     model_config = ConfigDict(
-        json_schema_extra={
-            "example": {"detail": "No profile data yet. Call POST /sync first."}
-        }
+        json_schema_extra={"example": {"detail": "No profile data yet. Call POST /sync first."}}
     )

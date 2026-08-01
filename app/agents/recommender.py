@@ -51,9 +51,7 @@ def extract_topics(question: str) -> list[str]:
     text = (question or "").lower()
     found: list[str] = []
 
-    vocabulary = sorted(
-        {*CANONICAL_TOPICS, *_SPOKEN_TOPIC_ALIASES}, key=len, reverse=True
-    )
+    vocabulary = sorted({*CANONICAL_TOPICS, *_SPOKEN_TOPIC_ALIASES}, key=len, reverse=True)
     for phrase in vocabulary:
         if phrase in text:
             canonical = _SPOKEN_TOPIC_ALIASES.get(phrase) or normalize_tag(phrase)

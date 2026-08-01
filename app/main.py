@@ -25,6 +25,7 @@ from contextlib import asynccontextmanager
 from fastapi import Depends, FastAPI, HTTPException, Query, status
 from fastapi.responses import RedirectResponse
 
+from app.agents.recommender import RecommenderAgent
 from app.agents.router import TutorRouter, get_router
 from app.agents.weak_topics import WeakTopicAgent
 from app.config import Settings, get_settings
@@ -125,6 +126,10 @@ app = FastAPI(
 # ---------------------------------------------------------------------------
 def get_weak_topic_agent() -> WeakTopicAgent:
     return WeakTopicAgent()
+
+
+def get_recommender_agent() -> RecommenderAgent:
+    return RecommenderAgent()
 
 
 def require_synced_data(
@@ -299,16 +304,13 @@ async def recommendations(
     rating: int | None = Query(
         default=None, description="Override your Codeforces rating when sizing the band."
     ),
-    router: TutorRouter = Depends(get_router),
-    _: IngestionService = Depends(require_synced_data),
+    settings: Settings = Depends(get_settings),
+    agent: RecommenderAgent = Depends(get_recommender_agent),
+    ingestion: IngestionService = Depends(require_synced_data),
 ) -> RecommendationsResponse:
-    from app.agents.recommender import RecommenderAgent
-
-    agent = RecommenderAgent()
     results, weak = agent.run(limit=limit, topics=topics, rating_override=rating)
 
-    settings = get_settings()
-    effective = rating or get_ingestion_service().get_user_rating().rating
+    effective = rating or ingestion.get_user_rating().rating
     effective = effective or settings.default_rating_when_unrated
     band = f"{effective - settings.rating_band_below}-{effective + settings.rating_band_above}"
 
@@ -327,7 +329,7 @@ async def recommendations(
     description=(
         "Vector search across the problems you have attempted, embedded as "
         "`name + topics + difficulty`.\n\n"
-        "This matches on *meaning*, not keywords — a query for \"graph traversal\" will "
+        'This matches on *meaning*, not keywords — a query for "graph traversal" will '
         "surface problems tagged `dfs and similar` and `trees` even though the words do "
         "not appear. Filter with `solved=false` to look specifically at what you got stuck on."
     ),

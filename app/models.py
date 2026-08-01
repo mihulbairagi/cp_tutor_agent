@@ -26,7 +26,9 @@ class ProblemRecord(BaseModel):
     """One problem the user has attempted, on either platform."""
 
     source: Source
-    problem_id: str = Field(description="Stable cross-platform id, e.g. 'cf:1352/A' or 'lc:two-sum'")
+    problem_id: str = Field(
+        description="Stable cross-platform id, e.g. 'cf:1352/A' or 'lc:two-sum'"
+    )
     name: str
     url: str
 
@@ -75,7 +77,9 @@ class CandidateProblem(BaseModel):
     rating: int | None = None
     tags: list[str] = Field(default_factory=list)
     raw_tags: list[str] = Field(default_factory=list)
-    solved_count: int = Field(default=0, description="How many users solved it; a popularity proxy.")
+    solved_count: int = Field(
+        default=0, description="How many users solved it; a popularity proxy."
+    )
 
 
 class Recommendation(BaseModel):

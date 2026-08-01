@@ -255,9 +255,7 @@ class LeetCodeClient:
         self, username: str | None = None, *, force_refresh: bool = False
     ) -> dict[str, int]:
         username = username or self._settings.leetcode_username
-        data = self._query(
-            USER_PROFILE_QUERY, {"username": username}, force_refresh=force_refresh
-        )
+        data = self._query(USER_PROFILE_QUERY, {"username": username}, force_refresh=force_refresh)
         return parse_profile_stats(data)
 
     def fetch_question(self, slug: str, *, force_refresh: bool = False) -> dict | None:

@@ -47,6 +47,7 @@ quote-style = "double"
 # ---------------------------------------------------------------------------
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["."]
 addopts = "-q --strict-markers"
 filterwarnings = ["ignore::DeprecationWarning"]
 markers = [

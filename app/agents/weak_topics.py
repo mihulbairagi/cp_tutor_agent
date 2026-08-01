@@ -65,7 +65,9 @@ class WeakTopicAgent:
 
         # Score everything, then slice — filtering before scoring would change
         # the overall rating ceiling and distort the difficulty signal.
-        ranked = analyse_weak_topics(records, settings=self._settings, limit=0, candidates=candidates)
+        ranked = analyse_weak_topics(
+            records, settings=self._settings, limit=0, candidates=candidates
+        )
 
         if topic_filter:
             needle = topic_filter.strip().lower()

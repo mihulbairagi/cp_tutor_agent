@@ -151,6 +151,11 @@ def _enforce_diversity(
     one or two weak topics), the best remaining problems backfill the list —
     returning three problems when ten were asked for would be worse than a
     slightly repetitive set.
+
+    The cap decides *membership*; the final sort decides *presentation*. Those
+    are separate concerns, so the selection is re-sorted at the end: a backfilled
+    problem can outscore one the cap let through, and a list that is not
+    monotonically best-first reads as broken.
     """
     chosen: list[Recommendation] = []
     used: Counter[str] = Counter()
@@ -172,4 +177,5 @@ def _enforce_diversity(
             if recommendation.problem.problem_id not in already:
                 chosen.append(recommendation)
 
+    chosen.sort(key=lambda rec: (-rec.score, rec.problem.problem_id))
     return chosen[:limit]

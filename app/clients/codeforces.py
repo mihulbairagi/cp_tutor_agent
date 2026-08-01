@@ -190,9 +190,7 @@ class CodeforcesClient:
     ) -> None:
         self._settings = settings or get_settings()
         # Codeforces asks for at most one request per second from a given client.
-        self._client = client or ResilientClient(
-            settings=self._settings, min_interval_seconds=1.0
-        )
+        self._client = client or ResilientClient(settings=self._settings, min_interval_seconds=1.0)
 
     def fetch_submissions(
         self, handle: str | None = None, *, force_refresh: bool = False

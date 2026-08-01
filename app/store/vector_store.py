@@ -68,7 +68,9 @@ class VectorStore:
 
             settings = self._settings
             if settings.chroma_mode == "http":
-                self._client = chromadb.HttpClient(host=settings.chroma_host, port=settings.chroma_port)
+                self._client = chromadb.HttpClient(
+                    host=settings.chroma_host, port=settings.chroma_port
+                )
                 logger.info(
                     "connected to Chroma server",
                     extra={"host": settings.chroma_host, "port": settings.chroma_port},
