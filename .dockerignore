@@ -1,0 +1,31 @@
+# Keep the build context small and avoid invalidating the dependency layer on
+# every local file change. Also stops secrets and local state from being baked
+# into the image: `.env` in particular must never be copied in — it is supplied
+# at runtime by compose.
+
+.git
+.gitignore
+.github
+
+.venv
+venv
+__pycache__
+*.py[cod]
+*.egg-info
+.pytest_cache
+.ruff_cache
+
+.env
+.env.*
+!.env.example
+
+data/
+*.db
+*.sqlite3
+
+tests/
+README.md
+LICENSE
+Dockerfile
+docker-compose.yml
+.dockerignore

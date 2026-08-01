@@ -1,0 +1,63 @@
+# One command to run the whole thing:
+#
+#     cp .env.example .env      # fill in your handles
+#     docker compose up --build
+#     open http://localhost:8000/docs
+#
+# Two services, because Chroma in `http` mode is how it would actually be
+# deployed — the API stays stateless and the index survives an API restart.
+# For a laptop you can drop the chroma service entirely and set
+# CHROMA_MODE=persistent; that path is supported and needs no extra container.
+
+services:
+  api:
+    build: .
+    container_name: cp-tutor-api
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      # Talk to the sibling container rather than a local directory. Set here
+      # instead of in .env so the same .env works for a bare `uvicorn` run.
+      CHROMA_MODE: http
+      CHROMA_HOST: chroma
+      CHROMA_PORT: "8000"
+      CACHE_DB_PATH: /app/data/cache.db
+    volumes:
+      # Keeps the SQLite HTTP cache across restarts, so a rebuild does not mean
+      # re-fetching the 1.5 MB Codeforces problemset.
+      - api-data:/app/data
+    depends_on:
+      chroma:
+        condition: service_healthy
+    restart: unless-stopped
+
+  chroma:
+    image: chromadb/chroma:0.5.20
+    container_name: cp-tutor-chroma
+    # Not published to the host: only the API needs to reach it.
+    expose:
+      - "8000"
+    volumes:
+      - chroma-data:/chroma/chroma
+    environment:
+      IS_PERSISTENT: "TRUE"
+      ANONYMIZED_TELEMETRY: "FALSE"
+    healthcheck:
+      # Chroma's own heartbeat endpoint. Checked with python rather than curl
+      # because the upstream image does not ship curl.
+      test:
+        - CMD
+        - python
+        - -c
+        - import urllib.request; urllib.request.urlopen("http://localhost:8000/api/v1/heartbeat")
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
+    restart: unless-stopped
+
+volumes:
+  api-data:
+  chroma-data:

@@ -1,0 +1,105 @@
+name: CI
+
+# Runs on every push and every PR against main. Kept deliberately fast — the
+# whole job is lint plus a network-free test suite plus the eval harness, so it
+# finishes in well under a minute and is worth waiting for on every commit.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  # A new push supersedes an in-flight run on the same ref.
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Lint, test and evaluate
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # 3.11 is the floor declared in pyproject; 3.12 catches deprecations
+        # early. Both, because a version-specific break is easy to miss.
+        python-version: ["3.11", "3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            requirements-dev.txt
+
+      - name: Install dependencies
+        # The CPU wheel index keeps torch (a sentence-transformers dependency)
+        # from dragging ~2 GB of CUDA libraries into a runner that has no GPU.
+        run: |
+          python -m pip install --upgrade pip
+          pip install --extra-index-url https://download.pytorch.org/whl/cpu \
+            -r requirements-dev.txt
+
+      - name: Lint
+        run: ruff check --output-format=github .
+
+      - name: Check formatting
+        run: ruff format --check --diff .
+
+      - name: Test
+        # No ANTHROPIC_API_KEY and no network: the suite exercises the keyword
+        # classifier and template answers, which is the code path a fork or a
+        # contributor without a key will actually run.
+        run: pytest -q -m "not integration"
+
+      - name: Evaluate
+        # A behavioural gate on top of the unit tests: the unit tests assert the
+        # pieces work, this asserts the assembled system answers real questions
+        # correctly. Non-zero exit fails the build.
+        run: python -m eval.run_eval
+
+  docker:
+    name: Build the image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          load: true
+          tags: cp-tutor-agent:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Smoke test the container
+        # Proves the image actually boots and serves, which a build alone does
+        # not. /health is reachable with no synced data (it reports `degraded`),
+        # so this needs no credentials.
+        run: |
+          docker run -d --name smoke -p 8000:8000 \
+            -e CODEFORCES_HANDLE=tourist \
+            -e SYNC_ENABLED=false \
+            cp-tutor-agent:ci
+          for attempt in $(seq 1 30); do
+            if curl -fsS http://localhost:8000/health; then
+              echo "container is serving"
+              docker rm -f smoke
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "container never became healthy"
+          docker logs smoke
+          docker rm -f smoke
+          exit 1
