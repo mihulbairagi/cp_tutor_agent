@@ -133,10 +133,27 @@ def test_post_json_sends_the_body_and_caches_on_it(client) -> None:
 
 
 def test_rate_limiter_spaces_calls_out() -> None:
+    """The second call waits; the first does not.
+
+    Asserted with a tolerance because ``time.sleep`` and ``time.monotonic`` do
+    not share a clock source on Windows — a 50 ms sleep routinely measures as
+    47 ms. Demanding the exact interval makes this test fail on a machine where
+    the limiter is working perfectly well, so the assertion checks the
+    behaviour (it blocked for most of an interval) rather than the clock.
+    """
     import time
 
-    limiter = RateLimiter(0.05)
+    interval = 0.05
+    tolerance = 0.9  # absorbs OS timer granularity, still fails if no sleep happened
+
+    limiter = RateLimiter(interval)
+
     started = time.monotonic()
     limiter.acquire()
+    first = time.monotonic() - started
+    assert first < interval * tolerance, "the first call should not be throttled"
+
+    started = time.monotonic()
     limiter.acquire()
-    assert time.monotonic() - started >= 0.05
+    second = time.monotonic() - started
+    assert second >= interval * tolerance, "the second call should wait out the interval"
